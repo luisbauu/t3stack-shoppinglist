@@ -13,17 +13,30 @@ type Item = {
 
 const Home: NextPage = () => {
   const [items, setItems] = useState<Item[]>([]);
+  const [checkedItems, setCheckedItems] = useState<Item[]>([]);
   const [openModal, setOpenModal] = useState<boolean>(false);
 
   const { data: itemsData, isLoading } = api.item.getItems.useQuery(undefined, {
     onSuccess(data) {
       setItems(data);
+      const checked = data.filter((data) => data.checked);
+      setCheckedItems(checked);
     },
   });
 
   const deleteItem = api.item.deleteItem.useMutation({
     onSuccess(data) {
       console.log("Deleting Item", data);
+    },
+  });
+
+  const { mutate: toggleCheck } = api.item.toggleCheck.useMutation({
+    onSuccess(data) {
+      if (checkedItems.some((item) => item.id === data.id)) {
+        setCheckedItems((items) => items.filter((item) => item.id !== data.id));
+      } else {
+        setCheckedItems((items) => [...items, data]);
+      }
     },
   });
 
@@ -68,10 +81,20 @@ const Home: NextPage = () => {
               <div className="flex flex-row items-center">
                 <input
                   type="checkbox"
-                  checked={item.checked}
-                  onChange={() => {}}
+                  checked={checkedItems.some((itemA) => itemA.id === item.id)}
+                  onChange={() => {
+                    toggleCheck({ id: item.id, checked: !item.checked });
+                  }}
                 />
-                <span className="ml-2">{item.name}</span>
+                <span
+                  className={`ml-2 ${
+                    checkedItems.some((itemA) => itemA.id === item.id)
+                      ? "line-through"
+                      : ""
+                  }`}
+                >
+                  {item.name}
+                </span>
               </div>
               <button
                 onClick={() => handleDelete(item.id)}
